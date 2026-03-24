@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+venv312/
+
+# Environment variables (secrets)
+.env
+
+# Artifacts / outputs (usually large or generated)
+artifacts/
+
+# Ignore specific test / temp files
+not.py
+test1.py
+test2_for_optimizer.py
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
