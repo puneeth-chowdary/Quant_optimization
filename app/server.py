@@ -63,9 +63,9 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 @app.route("/submit-portfolio", methods=["POST"])
 def submit_portfolio():
     data = request.get_json(force=True)
-    print("RECEIVED FROM HTML:", data)   # 👈 add this
+    print("RECEIVED FROM HTML:", data)  
     update_maps(data)
-    print("UPDATED NSE_MAP:", NSE_MAP)   # 👈 add this
+    print("UPDATED NSE_MAP:", NSE_MAP)   
     response = generate_response()  
     return jsonify({
         "status": "success",

@@ -325,15 +325,15 @@
             transform: translateY(-2px);
         }
 
-        /* Output display */
+        /* ----------------------------------------------------------------
+           OUTPUT DISPLAY (improved for Claude-style formatting)
+        ---------------------------------------------------------------- */
         .output-display {
-            max-width: 800px;
+            max-width: 900px;
             margin: 40px auto 0;
-            padding: 30px;
-            background: rgba(15, 15, 15, 0.8);
-            border: 1px solid rgba(80, 80, 80, 0.2);
-            border-radius: 10px;
-            min-height: 100px;
+            padding: 0;
+            background: transparent;
+            border: none;
             display: none;
         }
 
@@ -343,42 +343,58 @@
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .output-card {
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(100, 100, 100, 0.25);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(80, 80, 80, 0.3);
         }
 
         .output-title {
             font-size: 0.8rem;
-            color: #888;
+            color: #aaa;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            margin-bottom: 15px;
             font-weight: 500;
+            margin: 0;
         }
 
-        .output-content {
-            color: #b0b0b0;
-            font-size: 0.95rem;
-            line-height: 1.8;
-            white-space: pre-wrap;
+        .output-badge {
+            font-size: 0.7rem;
+            color: #777;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
         }
 
-        .output-content .stock-item {
-            margin-bottom: 8px;
+        .output-body {
+            padding: 24px;
+            max-height: 600px;
+            overflow-y: auto;
         }
 
-        .output-content .total {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(80, 80, 80, 0.2);
-            font-weight: 500;
-            color: #c0c0c0;
+        /* Custom scrollbar for output body */
+        .output-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .output-body::-webkit-scrollbar-track {
+            background: rgba(20,20,20,0.5);
+        }
+        .output-body::-webkit-scrollbar-thumb {
+            background: rgba(80,80,80,0.6);
+            border-radius: 3px;
         }
 
         /* Responsive */
@@ -514,9 +530,8 @@
             </button>
         </div>
 
-        <!-- Output Display -->
+        <!-- Output Display (Claude-style formatting) -->
         <div class="output-display" id="outputDisplay">
-            <div class="output-title">Analysis Results</div>
             <div class="output-content" id="outputContent"></div>
         </div>
     </div>
@@ -680,7 +695,186 @@
             
             dropdown.classList.add('active');
         }
-        
+
+        // IMPROVED OUTPUT FORMATTING - Claude-style display
+        function formatAnalysis(raw) {
+            if (!raw || raw.trim() === '') return '';
+
+            const lines = raw.trim().split('\n');
+            let html = '';
+            let i = 0;
+
+            while (i < lines.length) {
+                const line = lines[i];
+                const trimmed = line.trim();
+
+                // Skip empty lines (but use them for spacing)
+                if (trimmed === '') {
+                    i++;
+                    continue;
+                }
+
+                // Headers: ## for h2, ### for h3
+                if (trimmed.startsWith('##')) {
+                    const title = trimmed.replace(/^#+\s*/, '');
+                    html += `<h2 style="font-size: 1.1rem; color: #c0c0c0; margin: 20px 0 12px 0; font-weight: 600; letter-spacing: 0.5px;">${escapeHtml(title)}</h2>`;
+                    i++;
+                    continue;
+                }
+
+                if (trimmed.startsWith('#')) {
+                    const title = trimmed.replace(/^#+\s*/, '');
+                    html += `<h3 style="font-size: 1rem; color: #d4d4d4; margin: 16px 0 10px 0; font-weight: 600;">${escapeHtml(title)}</h3>`;
+                    i++;
+                    continue;
+                }
+
+                // Code blocks: ```language...```
+                if (trimmed.startsWith('```')) {
+                    const codeLines = [];
+                    i++;
+                    while (i < lines.length && !lines[i].trim().startsWith('```')) {
+                        codeLines.push(lines[i]);
+                        i++;
+                    }
+                    if (i < lines.length) i++; // skip closing ```
+                    html += `<pre style="font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; color: #d4d4d4; white-space: pre-wrap; word-break: break-word; margin: 16px 0; background: rgba(10, 10, 10, 0.6); padding: 16px; border-radius: 8px; border: 1px solid rgba(80, 80, 80, 0.2); overflow-x: auto; max-width: 100%;">${escapeHtml(codeLines.join('\n'))}</pre>`;
+                    continue;
+                }
+
+                // Bullet lists: -, *, •
+                if (trimmed.match(/^[-*•]\s/)) {
+                    const listItems = [];
+                    while (i < lines.length && lines[i].trim().match(/^[-*•]\s/)) {
+                        const text = lines[i].trim().replace(/^[-*•]\s*/, '');
+                        listItems.push(text);
+                        i++;
+                    }
+                    html += `<ul style="margin: 16px 0; padding-left: 24px; list-style: disc; color: #d4d4d4; line-height: 1.6;">`;
+                    listItems.forEach(item => {
+                        html += `<li style="margin: 8px 0;">${formatInlineMarkdown(escapeHtml(item))}</li>`;
+                    });
+                    html += `</ul>`;
+                    continue;
+                }
+
+                // Numbered lists: 1. 2. 3. etc
+                if (trimmed.match(/^\d+\.\s/)) {
+                    const listItems = [];
+                    while (i < lines.length && lines[i].trim().match(/^\d+\.\s/)) {
+                        const text = lines[i].trim().replace(/^\d+\.\s*/, '');
+                        listItems.push(text);
+                        i++;
+                    }
+                    html += `<ol style="margin: 16px 0; padding-left: 24px; list-style: decimal; color: #d4d4d4; line-height: 1.6;">`;
+                    listItems.forEach(item => {
+                        html += `<li style="margin: 8px 0;">${formatInlineMarkdown(escapeHtml(item))}</li>`;
+                    });
+                    html += `</ol>`;
+                    continue;
+                }
+
+                // Regular paragraph
+                html += `<p style="margin: 12px 0; line-height: 1.65; color: #d4d4d4;">${formatInlineMarkdown(escapeHtml(trimmed))}</p>`;
+                i++;
+            }
+
+            return html || `<p style="color: #d4d4d4;">${escapeHtml(raw)}</p>`;
+        }
+
+        // Format inline markdown: **bold**, *italic*, `code`
+        function formatInlineMarkdown(text) {
+            // Bold: **text** or __text__
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e0e0e0; font-weight: 600;">$1</strong>');
+            text = text.replace(/__(.+?)__/g, '<strong style="color: #e0e0e0; font-weight: 600;">$1</strong>');
+
+            // Italic: *text* or _text_ (but not within bold)
+            text = text.replace(/\*([^*]+)\*/g, '<em style="color: #b8b8b8; font-style: italic;">$1</em>');
+            text = text.replace(/_([^_]+)_/g, '<em style="color: #b8b8b8; font-style: italic;">$1</em>');
+
+            // Inline code: `code`
+            text = text.replace(/`([^`]+)`/g, '<code style="background: rgba(10, 10, 10, 0.8); color: #79d3c3; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 0.9em;">$1</code>');
+
+            return text;
+        }
+
+        // Helper to safely escape HTML
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Portfolio optimization with improved output display
+        async function optimizePortfolio() {
+            let stocks = [];
+
+            for (let i = 1; i <= stockCount; i++) {
+                const stockInput = document.getElementById(`stock${i}`);
+                const qtyInput = document.getElementById(`qty${i}`);
+
+                if (stockInput && qtyInput) {
+                    const symbol = stockInput.value.trim();
+                    const qty = parseInt(qtyInput.value) || 0;
+
+                    if (symbol && qty > 0) {
+                        stocks.push({
+                            symbol: symbol,
+                            qty: qty
+                        });
+                    }
+                }
+            }
+
+            if (stocks.length === 0) {
+                alert("Enter at least one stock");
+                return;
+            }
+
+            try {
+                const res = await fetch("http://127.0.0.1:5001/submit-portfolio", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(stocks)
+                });
+
+                const data = await res.json();
+
+                if (data.analysis) {
+                    const outputDisplay = document.getElementById("outputDisplay");
+                    const outputContent = document.getElementById("outputContent");
+
+                    // Format the analysis using new Claude-style formatter
+                    const formattedHtml = formatAnalysis(data.analysis);
+
+                    outputContent.innerHTML = `
+                        <div class="output-card">
+                            <div class="output-header">
+                                <span class="output-title">Portfolio Analysis</span>
+                                <span class="output-badge">${stocks.length} asset${stocks.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div class="output-body">
+                                ${formattedHtml}
+                            </div>
+                        </div>
+                    `;
+
+                    outputDisplay.classList.add("active");
+                    
+                    // Smooth scroll to output
+                    setTimeout(() => {
+                        outputDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Backend error");
+            }
+        }
+
         // Initialize autocomplete for initial stock inputs
         for (let i = 1; i <= stockCount; i++) {
             setupAutocomplete(i);
@@ -688,60 +882,6 @@
         
         updateRemoveButton();
         
-        // Portfolio optimization with output display
-    async function optimizePortfolio() {
-    let stocks = [];
-
-    for (let i = 1; i <= stockCount; i++) {
-        const stockInput = document.getElementById(`stock${i}`);
-        const qtyInput = document.getElementById(`qty${i}`);
-
-        if (stockInput && qtyInput) {
-            const symbol = stockInput.value.trim();
-            const qty = parseInt(qtyInput.value) || 0;
-
-            if (symbol && qty > 0) {
-                stocks.push({
-                    symbol: symbol,
-                    qty: qty
-                });
-            }
-        }
-    }
-
-    if (stocks.length === 0) {
-        alert("Enter at least one stock");
-        return;
-    }
-
-    try {
-        const res = await fetch("http://127.0.0.1:5001/submit-portfolio", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(stocks)
-        });
-
-        const data = await res.json();
-
-        if (data.analysis) {
-            const outputDisplay = document.getElementById("outputDisplay");
-            const outputContent = document.getElementById("outputContent");
-
-            outputContent.textContent = data.analysis;
-            outputDisplay.classList.add("active");
-        }
-
-    } catch (err) {
-        console.error(err);
-        alert("Backend error");
-    }
-}
-//window.addEventListener("beforeunload", function () {
-  //  navigator.sendBeacon(
-    //    "http://127.0.0.1:5001/reset-portfolio",
-      //  ""
-   // );
-//});
         // Subtle mouse tracking
         const mouseGradient = document.getElementById('mouseGradient');
         document.addEventListener('mousemove', (e) => {
