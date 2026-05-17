@@ -11,7 +11,7 @@ venv312/
 .env
 
 # Artifacts / outputs (usually large or generated)
-artifacts/
+#artifacts/
 
 # Ignore specific test / temp files
 not.py

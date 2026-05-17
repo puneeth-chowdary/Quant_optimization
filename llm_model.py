@@ -162,7 +162,7 @@ Output format rules:
     prompt = prompt[:15000]
 
     response = client.chat.completions.create(
-        model="qwen/qwen3-32b",
+        model= "openai/gpt-oss-120b",#"llama-3.3-70b-versatile"--2/5 very small response no explanation ,#"openai/gpt-oss-120b"--good 3.75/5 ,#"qwen/qwen3-32b"-pretty bad 2.5/5,
         messages=[
             {
                 "role": "system",
